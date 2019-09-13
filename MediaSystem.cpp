@@ -40,8 +40,13 @@ WPEFramework::Core::CriticalSection drmAppContextMutex_;
 static DRM_WCHAR* createDrmWchar(std::string const& s) {
     DRM_WCHAR* w = new DRM_WCHAR[s.length() + 1];
     for (size_t i = 0; i < s.length(); ++i)
+#ifdef PR_3_3
+        w[i] = DRM_ONE_WCHAR(s[i], '\0');
+    w[s.length()] = DRM_ONE_WCHAR('\0', '\0');
+#else
         w[i] = ONE_WCHAR(s[i], '\0');
     w[s.length()] = ONE_WCHAR('\0', '\0');
+#endif
     return w;
 }
 
@@ -118,6 +123,7 @@ public:
 
        SafeSyncType<CriticalSection> lock(drmAppContextMutex_);
 
+#ifdef NOT_AVAILABLE
        DRM_UINT64 utctime64;
        DRM_RESULT err = Drm_Clock_GetSystemTime(m_poAppContext.get(), &utctime64);
        if (err != DRM_SUCCESS) {
@@ -128,6 +134,7 @@ public:
            //*time = (time_t)utctime64;
            return (time_t)utctime64;
        }
+#endif
 
        return 0;
 
@@ -174,11 +181,13 @@ public:
         SafeSyncType<CriticalSection> lock(drmAppContextMutex_);
 
         uint32_t ldlLimit = 0;
+#ifdef NOT_AVAILABLE
         DRM_RESULT err = Drm_LicenseAcq_GetLdlSessionsLimit_Netflix(m_poAppContext.get(), &ldlLimit);
         if (err != DRM_SUCCESS) {
             fprintf(stderr, "Error: Drm_LicenseAcq_GetLdlSessionsLimit_Netflix returned 0x%lX\n", (long)err);
             return 0;
         }
+#endif
 
         return ldlLimit;
     }
@@ -186,13 +195,19 @@ public:
     bool IsSecureStopEnabled() override
     {
         SafeSyncType<CriticalSection> lock(drmAppContextMutex_);
+#ifdef NOT_AVAILABLE
         return static_cast<bool>(Drm_SupportSecureStop());
+#else
+        return false;
+#endif
     }
 
     CDMi_RESULT EnableSecureStop(bool enable) override
     {
         SafeSyncType<CriticalSection> lock(drmAppContextMutex_);
+#ifdef NOT_AVAILABLE
         Drm_TurnSecureStop(static_cast<int>(enable));
+#endif
 
         return CDMi_SUCCESS;
     }
@@ -200,16 +215,21 @@ public:
     uint32_t ResetSecureStops() override
     {
         SafeSyncType<CriticalSection> lock(drmAppContextMutex_);
+
+#ifdef NOT_AVAILABLE
         // if secure stop is not supported, return
         DRM_BOOL supported = Drm_SupportSecureStop();
         if (supported == FALSE)
             return 0;
+#endif
 
         DRM_WORD numDeleted = 0;
+#ifdef NOT_AVAILABLE
         DRM_RESULT err = Drm_ResetSecureStops(m_poAppContext.get(), &numDeleted);
         if (err != DRM_SUCCESS) {
             fprintf(stderr, "Drm_ResetSecureStops returned 0x%lx\n", (long)err);
         }
+#endif
         return numDeleted;
     }
 
@@ -217,6 +237,7 @@ public:
     {
         SafeSyncType<CriticalSection> lock(drmAppContextMutex_);
 
+#ifdef NOT_AVAILABLE
         // if secure stop is not supported, return NotAllowed
         DRM_BOOL supported = Drm_SupportSecureStop();
         if (supported == FALSE)
@@ -232,6 +253,7 @@ public:
         for (int i = 0; i < count; ++i) {
             memcpy(&ids[i * TEE_SESSION_ID_LEN], sessionIds[i], TEE_SESSION_ID_LEN);
         }
+#endif
 
         return CDMi_SUCCESS;
     }
@@ -244,6 +266,7 @@ public:
     {
         SafeSyncType<CriticalSection> lock(drmAppContextMutex_);
 
+#ifdef NOT_AVAILABLE
         // if secure stop is not supported, return
         DRM_BOOL supported = Drm_SupportSecureStop();
         if (supported == FALSE)
@@ -265,6 +288,7 @@ public:
             fprintf(stderr, "Drm_GetSecureStop(0) returned 0x%lx\n", (long)err);
             return CDMi_S_FALSE;
         }
+#endif
 
         return CDMi_SUCCESS;
     }
@@ -277,6 +301,7 @@ public:
     {
         SafeSyncType<CriticalSection> lock(drmAppContextMutex_);
 
+#ifdef NOT_AVAILABLE
         // if secure stop is not supported, return
         DRM_BOOL supported = Drm_SupportSecureStop();
         if (supported == FALSE)
@@ -298,6 +323,7 @@ public:
         {
             fprintf(stderr, "Drm_CommitSecureStop returned 0x%lx\n", (long)err);
         }
+#endif
 
         return CDMi_SUCCESS;
     }
@@ -339,6 +365,7 @@ public:
 
         DRM_RESULT err;
 
+#ifdef NOT_AVAILABLE
         // DRM Platform Initialization
         err = Drm_Platform_Initialize();
         if(DRM_FAILED(err))
@@ -375,6 +402,7 @@ public:
             fprintf(stderr, "Error in Drm_Revocation_SetBuffer: 0x%08lX\n", err);
             return CDMi_S_FALSE;
         }
+#endif
 
         //return ERROR_NONE;
         return CDMi_SUCCESS;
@@ -389,6 +417,7 @@ public:
             return CDMi_S_FALSE;
         }
 
+#ifdef NOT_AVAILABLE
         DRM_RESULT err;
         err = Drm_Reader_Commit(m_poAppContext.get(), nullptr, nullptr);
         if(DRM_FAILED(err)) {
@@ -414,6 +443,7 @@ public:
             fprintf(stderr, "Failed to call Drm_Platform_Unitialize\n");
             return CDMi_S_FALSE;
         }
+#endif
 
         return CDMi_SUCCESS;
     }
@@ -422,12 +452,14 @@ public:
     {
         SafeSyncType<CriticalSection> lock(drmAppContextMutex_);
 
+#ifdef NOT_AVAILABLE
         DRM_RESULT err = Drm_DeleteKeyStore();
         if (err != DRM_SUCCESS)
         {
             fprintf(stderr, "Error: Drm_DeleteKeyStore returned 0x%lX\n", (long)err);
             return CDMi_S_FALSE;
         }
+#endif
 
         return CDMi_SUCCESS;
     }
@@ -436,12 +468,14 @@ public:
     {
         SafeSyncType<CriticalSection> lock(drmAppContextMutex_);
 
+#ifdef NOT_AVAILABLE
         DRM_RESULT err = Drm_DeleteSecureStore(&drmStore_);
         if (err != DRM_SUCCESS)
         {
             fprintf(stderr, "Error: Drm_DeleteSecureStore returned 0x%lX\n", (long)err);
             return CDMi_S_FALSE;
         }
+#endif
 
         return CDMi_SUCCESS;
     }
@@ -458,12 +492,14 @@ public:
             return CDMi_S_FALSE;
         }
 
+#ifdef NOT_AVAILABLE
         DRM_RESULT err = Drm_GetKeyStoreHash(keyStoreHash);
         if (err != DRM_SUCCESS)
         {
             fprintf(stderr, "Error: Drm_GetSecureStoreHash returned 0x%lX\n", (long)err);
             return CDMi_S_FALSE;
         }
+#endif
 
         return CDMi_SUCCESS;
     }
@@ -480,12 +516,14 @@ public:
             return CDMi_S_FALSE;
         }
 
+#ifdef NOT_AVAILABLE
         DRM_RESULT err = Drm_GetSecureStoreHash(&drmStore_, secureStoreHash);
         if (err != DRM_SUCCESS)
         {
             fprintf(stderr, "Error: Drm_GetSecureStoreHash returned 0x%lX\n", (long)err);
             return CDMi_S_FALSE;
         }
+#endif
 
         return CDMi_SUCCESS;
     }

@@ -18,7 +18,9 @@ set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
+if (NETFLIX)
 include("${PLAYREADY_INCLUDE}/playready.cmake")
+endif()
 
 target_include_directories(${MODULE_NAME}
     PRIVATE
@@ -26,10 +28,13 @@ target_include_directories(${MODULE_NAME}
     "${CMAKE_SYSROOT}/usr/include/${NAMESPACE}"
     ${PLAYREADY_INCLUDE_DIRS})
 
-
+if (NETFLIX)
 target_link_libraries(${MODULE_NAME}
     PRIVATE
         PlayReady::PlayReady)
+endif()
+target_link_libraries(${MODULE_NAME}
+    ${PLAYREADY_LIBRARIES})
 
 # Library installation section
 set_target_properties(${MODULE_NAME} PROPERTIES SUFFIX ".drm")
