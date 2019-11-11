@@ -219,9 +219,13 @@ MediaKeySession::MediaKeySession(const uint8_t *f_pbInitData, uint32_t f_cbInitD
 
   ChkMem(m_poAppContext = (DRM_APP_CONTEXT *)Oem_MemAlloc(SIZEOF(DRM_APP_CONTEXT)));
 
+  ChkMem(m_poOemContext = (OEM_CONTEXT *)Oem_MemAlloc(sizeof(OEM_CONTEXT)));
+  m_poOemContext->secure_fd = -1;
+  m_poOemContext->secure_buffer_size = 0;
+
   // Initialize DRM app context.
   ChkDR(Drm_Initialize(m_poAppContext,
-                       nullptr,
+                       m_poOemContext,
                        m_pbOpaqueBuffer,
                        m_cbOpaqueBuffer,
                        &g_dstrCDMDrmStoreName));
@@ -294,6 +298,7 @@ MediaKeySession::~MediaKeySession(void) {
 void MediaKeySession::UninitializeContext() {
   Drm_Uninitialize(m_poAppContext);
   
+  SAFE_OEM_FREE(m_poOemContext);
   SAFE_OEM_FREE(m_poAppContext);
 }
 
@@ -579,8 +584,8 @@ CDMi_RESULT MediaKeySession::Decrypt(
     }
 
     if(secureFd >= 0) {
-        m_oDecryptContext->secure_fd = secureFd;
-        m_oDecryptContext->secure_buffer_size = secureSize;
+        m_poOemContext->secure_fd = secureFd;
+        m_poOemContext->secure_buffer_size = secureSize;
     }
 
     ChkDR(Drm_Reader_DecryptOpaque(
@@ -596,6 +601,9 @@ CDMi_RESULT MediaKeySession::Decrypt(
         (DRM_BYTE *) payloadData,
         reinterpret_cast<DRM_DWORD*>(f_pcbOpaqueClearContent),
         reinterpret_cast<DRM_BYTE**>(f_ppbOpaqueClearContent)));
+
+    m_poOemContext->secure_fd = -1;
+    m_poOemContext->secure_buffer_size = 0;
 #else
     ChkDR(Drm_Reader_Decrypt(m_oDecryptContext, &ctrContext, (DRM_BYTE*)payloadData, payloadDataSize));
     if (DRM_FAILED(dr))
