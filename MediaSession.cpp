@@ -494,7 +494,9 @@ CDMi_RESULT MediaKeySession::Decrypt(
     uint8_t **f_ppbOpaqueClearContent,
     const uint8_t, // keyIdLength
     const uint8_t*, // keyId
-    bool initWithLast15)
+    bool initWithLast15,
+    int secureFd,
+    uint32_t secureSize)
 {
     SafeSyncType<CriticalSection> systemLock(drmAppContextMutex_);
     assert(f_cbIV > 0);
@@ -574,6 +576,11 @@ CDMi_RESULT MediaKeySession::Decrypt(
         rgdwMappings[1] = payloadDataSize;
         f_pdwSubSampleMapping = reinterpret_cast<const uint32_t*>(rgdwMappings);
         f_cdwSubSampleMapping = NO_OF(rgdwMappings);
+    }
+
+    if(secureFd >= 0) {
+        m_oDecryptContext->secure_fd = secureFd;
+        m_oDecryptContext->secure_buffer_size = secureSize;
     }
 
     ChkDR(Drm_Reader_DecryptOpaque(
