@@ -181,6 +181,7 @@ private:
 protected:
     DRM_BOOL m_fCommit;
     DRM_APP_CONTEXT *m_poAppContext;
+    OEM_CONTEXT     *m_poOemContext;
     DRM_DECRYPT_CONTEXT *m_oDecryptContext;
     bool m_decryptInited;
 };
