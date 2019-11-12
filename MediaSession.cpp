@@ -188,6 +188,7 @@ bool parsePlayreadyInitializationData(const std::string& initData, std::string* 
 
 MediaKeySession::MediaKeySession(const uint8_t *f_pbInitData, uint32_t f_cbInitData, const uint8_t *f_pbCDMData, uint32_t f_cbCDMData, bool initiateChallengeGeneration /* = false */)
     : m_poAppContext(nullptr)
+    : m_poOemContext(nullptr)
     , m_pbOpaqueBuffer(nullptr) 
     , m_cbOpaqueBuffer(0)
     , m_pbRevocationBuffer(nullptr)
