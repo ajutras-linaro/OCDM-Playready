@@ -128,7 +128,9 @@ public:
     uint8_t **f_ppbOpaqueClearContent,
     const uint8_t keyIdLength,
     const uint8_t* keyId,
-    bool initWithLast15) override;
+    bool initWithLast15,
+    int secureFd,
+    uint32_t secureSize) override;
 
     virtual CDMi_RESULT ReleaseClearContent(
     const uint8_t *f_pbSessionKey,
@@ -179,6 +181,7 @@ private:
 protected:
     DRM_BOOL m_fCommit;
     DRM_APP_CONTEXT *m_poAppContext;
+    OEM_CONTEXT     *m_poOemContext;
     DRM_DECRYPT_CONTEXT *m_oDecryptContext;
     bool m_decryptInited;
 };

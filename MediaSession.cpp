@@ -188,6 +188,7 @@ bool parsePlayreadyInitializationData(const std::string& initData, std::string* 
 
 MediaKeySession::MediaKeySession(const uint8_t *f_pbInitData, uint32_t f_cbInitData, const uint8_t *f_pbCDMData, uint32_t f_cbCDMData, bool initiateChallengeGeneration /* = false */)
     : m_poAppContext(nullptr)
+    , m_poOemContext(nullptr)
     , m_pbOpaqueBuffer(nullptr) 
     , m_cbOpaqueBuffer(0)
     , m_pbRevocationBuffer(nullptr)
@@ -219,9 +220,13 @@ MediaKeySession::MediaKeySession(const uint8_t *f_pbInitData, uint32_t f_cbInitD
 
   ChkMem(m_poAppContext = (DRM_APP_CONTEXT *)Oem_MemAlloc(SIZEOF(DRM_APP_CONTEXT)));
 
+  ChkMem(m_poOemContext = (OEM_CONTEXT *)Oem_MemAlloc(sizeof(OEM_CONTEXT)));
+  m_poOemContext->secure_fd = -1;
+  m_poOemContext->secure_buffer_size = 0;
+
   // Initialize DRM app context.
   ChkDR(Drm_Initialize(m_poAppContext,
-                       nullptr,
+                       m_poOemContext,
                        m_pbOpaqueBuffer,
                        m_cbOpaqueBuffer,
                        &g_dstrCDMDrmStoreName));
@@ -294,6 +299,7 @@ MediaKeySession::~MediaKeySession(void) {
 void MediaKeySession::UninitializeContext() {
   Drm_Uninitialize(m_poAppContext);
   
+  SAFE_OEM_FREE(m_poOemContext);
   SAFE_OEM_FREE(m_poAppContext);
 }
 
@@ -494,7 +500,9 @@ CDMi_RESULT MediaKeySession::Decrypt(
     uint8_t **f_ppbOpaqueClearContent,
     const uint8_t, // keyIdLength
     const uint8_t*, // keyId
-    bool initWithLast15)
+    bool initWithLast15,
+    int secureFd,
+    uint32_t secureSize)
 {
     SafeSyncType<CriticalSection> systemLock(drmAppContextMutex_);
     assert(f_cbIV > 0);
@@ -576,6 +584,11 @@ CDMi_RESULT MediaKeySession::Decrypt(
         f_cdwSubSampleMapping = NO_OF(rgdwMappings);
     }
 
+    if(secureFd >= 0) {
+        m_poOemContext->secure_fd = secureFd;
+        m_poOemContext->secure_buffer_size = secureSize;
+    }
+
     ChkDR(Drm_Reader_DecryptOpaque(
 #ifdef NETFLIX
         &m_oDecryptContext,
@@ -589,6 +602,9 @@ CDMi_RESULT MediaKeySession::Decrypt(
         (DRM_BYTE *) payloadData,
         reinterpret_cast<DRM_DWORD*>(f_pcbOpaqueClearContent),
         reinterpret_cast<DRM_BYTE**>(f_ppbOpaqueClearContent)));
+
+    m_poOemContext->secure_fd = -1;
+    m_poOemContext->secure_buffer_size = 0;
 #else
     ChkDR(Drm_Reader_Decrypt(m_oDecryptContext, &ctrContext, (DRM_BYTE*)payloadData, payloadDataSize));
     if (DRM_FAILED(dr))
